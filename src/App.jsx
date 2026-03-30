@@ -8,6 +8,7 @@ import Login from '@/pages/auth/Login'
 import ForgotPassword from '@/pages/auth/ForgotPassword'
 import ResetPassword from '@/pages/auth/ResetPassword'
 import AcceptInvite from '@/pages/auth/AcceptInvite'
+import Onboarding from '@/pages/auth/Onboarding'
 
 // Board
 import BoardDashboard from '@/pages/board/Dashboard'
@@ -52,6 +53,7 @@ function AppRoutes() {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/invite" element={<AcceptInvite />} />
+      <Route path="/onboarding" element={<RequireAuth><Onboarding /></RequireAuth>} />
 
       {/* Board admin */}
       <Route path="/board/dashboard" element={<RequireAuth roles={boardRoles}><BoardDashboard /></RequireAuth>} />

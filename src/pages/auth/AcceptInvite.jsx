@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import api from '@/lib/api'
+import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 export default function AcceptInvite() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
+  const { acceptInvite } = useAuth()
   const token = params.get('token')
   const [name, setName] = useState('')
   const [password, setPassword] = useState('')
@@ -20,10 +21,8 @@ export default function AcceptInvite() {
     setLoading(true)
     setError('')
     try {
-      const res = await api.post('/auth/accept-invite', { token, name, password })
-      const user = res.data.user
-      const isBoard = ['board_admin', 'treasurer', 'board_member'].includes(user.role)
-      navigate(isBoard ? '/board/dashboard' : '/resident/dashboard')
+      await acceptInvite(token, name, password)
+      navigate('/onboarding')
     } catch (err) {
       setError(err.response?.data?.error || 'Invalid or expired invite link')
     } finally {
