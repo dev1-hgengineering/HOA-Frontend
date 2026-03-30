@@ -1,11 +1,12 @@
 import { http, HttpResponse, delay } from 'msw'
 import {
   users, residents, boardMembers, maintenanceRequests,
-  announcements, dues, documents,
+  announcements, dues, documents, residentInviteTokens, boardInviteTokens,
 } from './data'
 
 // In-memory session (persists for the browser tab)
 let currentUser = null
+let currentOrg = null
 let mockResidents = [...residents]
 let mockRequests = [...maintenanceRequests]
 let mockAnnouncements = [...announcements]
@@ -20,23 +21,60 @@ export const handlers = [
   http.get(`${base}/auth/me`, async () => {
     await delay(150)
     if (!currentUser) return HttpResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    return HttpResponse.json(currentUser)
+    return HttpResponse.json({ user: currentUser, org: currentOrg })
   }),
 
   http.post(`${base}/auth/login`, async ({ request }) => {
     await delay(400)
     const { email, password } = await request.json()
-    const user = users.find((u) => u.email === email && u.password === password)
-    if (!user) return HttpResponse.json({ error: 'Invalid email or password' }, { status: 401 })
-    const { password: _, ...safeUser } = user
+    const found = users.find((u) => u.email === email && u.password === password)
+    if (!found) return HttpResponse.json({ error: 'Invalid email or password' }, { status: 401 })
+    const { password: _, ...safeUser } = found
     currentUser = safeUser
-    return HttpResponse.json({ user: safeUser })
+    currentOrg = safeUser.org || null
+    return HttpResponse.json({ user: safeUser, org: currentOrg })
   }),
 
   http.post(`${base}/auth/logout`, async () => {
     await delay(200)
     currentUser = null
+    currentOrg = null
     return HttpResponse.json({ ok: true })
+  }),
+
+  http.post(`${base}/auth/signup`, async ({ request }) => {
+    await delay(600)
+    const { hoa_name, first_name, last_name, email, password } = await request.json()
+
+    // Check email already in use
+    if (users.find((u) => u.email === email)) {
+      return HttpResponse.json({ error: 'An account with this email already exists' }, { status: 409 })
+    }
+
+    const newOrg = {
+      id: `org-${++nextId}`,
+      name: hoa_name,
+      plan: 'starter',
+      unit_ceiling: 50,
+      approval_status: 'pending',
+      onboarding_step: 1,
+      onboarding_complete: false,
+      trial_ends_at: null,
+      rejection_reason: null,
+    }
+    const newUser = {
+      id: String(++nextId),
+      name: `${first_name} ${last_name}`,
+      first_name,
+      last_name,
+      email,
+      role: 'board_admin',
+      org_id: newOrg.id,
+      org: newOrg,
+    }
+    currentUser = newUser
+    currentOrg = newOrg
+    return HttpResponse.json({ user: newUser, org: newOrg })
   }),
 
   http.post(`${base}/auth/forgot-password`, async () => {
@@ -49,12 +87,120 @@ export const handlers = [
     return HttpResponse.json({ ok: true })
   }),
 
+  // Accept invite for board_member / treasurer
+  http.get(`${base}/auth/invite`, async ({ request }) => {
+    await delay(300)
+    const url = new URL(request.url)
+    const token = url.searchParams.get('token')
+    const invite = boardInviteTokens[token]
+    if (!invite) return HttpResponse.json({ error: 'Invalid or expired invite link' }, { status: 400 })
+    return HttpResponse.json(invite)
+  }),
+
   http.post(`${base}/auth/accept-invite`, async ({ request }) => {
     await delay(400)
-    const { name } = await request.json()
-    const user = { id: String(++nextId), name, email: 'new@test.com', role: 'resident', unit: 'Unit 9A' }
+    const { token, first_name, last_name, password } = await request.json()
+    const invite = boardInviteTokens[token]
+    if (!invite) return HttpResponse.json({ error: 'Invalid or expired invite link' }, { status: 400 })
+
+    const user = {
+      id: String(++nextId),
+      name: `${first_name} ${last_name}`,
+      first_name,
+      last_name,
+      email: invite.email,
+      role: invite.role,
+      org_id: invite.org_id,
+      org: null,
+    }
     currentUser = user
+    currentOrg = null
     return HttpResponse.json({ user })
+  }),
+
+  // Accept invite for residents
+  http.get(`${base}/auth/resident-invite`, async ({ request }) => {
+    await delay(300)
+    const url = new URL(request.url)
+    const token = url.searchParams.get('token')
+    const invite = residentInviteTokens[token]
+    if (!invite) return HttpResponse.json({ error: 'Invalid or expired invite link' }, { status: 400 })
+    return HttpResponse.json(invite)
+  }),
+
+  http.post(`${base}/auth/accept-resident`, async ({ request }) => {
+    await delay(400)
+    const { token, first_name, last_name, password } = await request.json()
+    const invite = residentInviteTokens[token]
+    if (!invite) return HttpResponse.json({ error: 'Invalid or expired invite link' }, { status: 400 })
+
+    const user = {
+      id: String(++nextId),
+      name: `${first_name} ${last_name}`,
+      first_name,
+      last_name,
+      email: invite.email,
+      role: 'resident',
+      unit: invite.unit,
+      org_id: invite.org_id,
+      org: null,
+    }
+    currentUser = user
+    currentOrg = null
+    return HttpResponse.json({ user })
+  }),
+
+  // ── Onboarding ──────────────────────────────────────────────────────────────
+
+  http.post(`${base}/onboarding/step1`, async ({ request }) => {
+    await delay(400)
+    const data = await request.json()
+    if (currentOrg) {
+      Object.assign(currentOrg, { ...data, onboarding_step: 2 })
+      if (currentUser) currentUser.org = currentOrg
+    }
+    return HttpResponse.json({ ok: true })
+  }),
+
+  http.post(`${base}/onboarding/step2`, async ({ request }) => {
+    await delay(400)
+    // board member invites — just acknowledge in mock
+    if (currentOrg) {
+      currentOrg.onboarding_step = 3
+      if (currentUser) currentUser.org = currentOrg
+    }
+    return HttpResponse.json({ ok: true })
+  }),
+
+  http.post(`${base}/onboarding/step3`, async ({ request }) => {
+    await delay(400)
+    // resident invites — just acknowledge in mock
+    if (currentOrg) {
+      currentOrg.onboarding_step = 4
+      if (currentUser) currentUser.org = currentOrg
+    }
+    return HttpResponse.json({ ok: true })
+  }),
+
+  http.post(`${base}/onboarding/step4`, async ({ request }) => {
+    await delay(800)
+    // payment setup — always succeeds in mock
+    if (currentOrg) {
+      currentOrg.onboarding_step = 5
+      if (currentUser) currentUser.org = currentOrg
+    }
+    return HttpResponse.json({ ok: true })
+  }),
+
+  http.post(`${base}/onboarding/submit`, async ({ request }) => {
+    await delay(600)
+    if (currentOrg) {
+      currentOrg.onboarding_step = 5
+      currentOrg.onboarding_complete = true
+      currentOrg.approval_status = 'pending'
+      if (currentUser) currentUser.org = currentOrg
+    }
+    return HttpResponse.json({ ok: true })
   }),
 
   // ── Board: Dashboard ────────────────────────────────────────────────────────

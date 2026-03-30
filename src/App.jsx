@@ -5,10 +5,13 @@ import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 
 // Auth
 import Login from '@/pages/auth/Login'
+import Signup from '@/pages/auth/Signup'
 import ForgotPassword from '@/pages/auth/ForgotPassword'
 import ResetPassword from '@/pages/auth/ResetPassword'
 import AcceptInvite from '@/pages/auth/AcceptInvite'
+import AcceptResident from '@/pages/auth/AcceptResident'
 import Onboarding from '@/pages/auth/Onboarding'
+import PendingApproval from '@/pages/auth/PendingApproval'
 
 // Board
 import BoardDashboard from '@/pages/board/Dashboard'
@@ -43,6 +46,20 @@ function RequireAuth({ children, roles }) {
   return children
 }
 
+// Handles board_admin-specific routing: incomplete onboarding → /onboarding, not approved → /pending
+function BoardAdminRoute({ children }) {
+  const { user, org } = useAuth()
+  if (user?.role !== 'board_admin') return children
+  if (!org) return children
+  if (!org.onboarding_complete) {
+    return <Navigate to={`/onboarding?step=${org.onboarding_step || 1}`} replace />
+  }
+  if (org.approval_status !== 'approved') {
+    return <Navigate to="/pending" replace />
+  }
+  return children
+}
+
 const boardRoles = ['board_admin', 'treasurer', 'board_member', 'super_admin']
 
 function AppRoutes() {
@@ -50,21 +67,26 @@ function AppRoutes() {
     <Routes>
       {/* Public */}
       <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/invite" element={<AcceptInvite />} />
-      <Route path="/onboarding" element={<RequireAuth><Onboarding /></RequireAuth>} />
+      <Route path="/accept" element={<AcceptResident />} />
 
-      {/* Board admin */}
-      <Route path="/board/dashboard" element={<RequireAuth roles={boardRoles}><BoardDashboard /></RequireAuth>} />
-      <Route path="/board/residents" element={<RequireAuth roles={boardRoles}><Residents /></RequireAuth>} />
-      <Route path="/board/dues" element={<RequireAuth roles={boardRoles}><Dues /></RequireAuth>} />
-      <Route path="/board/maintenance" element={<RequireAuth roles={boardRoles}><Maintenance /></RequireAuth>} />
-      <Route path="/board/announcements" element={<RequireAuth roles={boardRoles}><Announcements /></RequireAuth>} />
-      <Route path="/board/documents" element={<RequireAuth roles={boardRoles}><Documents /></RequireAuth>} />
-      <Route path="/board/members" element={<RequireAuth roles={boardRoles}><BoardMembers /></RequireAuth>} />
-      <Route path="/board/settings" element={<RequireAuth roles={boardRoles}><Settings /></RequireAuth>} />
-      <Route path="/board/reports" element={<RequireAuth roles={boardRoles}><Reports /></RequireAuth>} />
+      {/* Board admin: onboarding & pending (auth required, no approval gate) */}
+      <Route path="/onboarding" element={<RequireAuth><Onboarding /></RequireAuth>} />
+      <Route path="/pending" element={<RequireAuth><PendingApproval /></RequireAuth>} />
+
+      {/* Board */}
+      <Route path="/board/dashboard" element={<RequireAuth roles={boardRoles}><BoardAdminRoute><BoardDashboard /></BoardAdminRoute></RequireAuth>} />
+      <Route path="/board/residents" element={<RequireAuth roles={boardRoles}><BoardAdminRoute><Residents /></BoardAdminRoute></RequireAuth>} />
+      <Route path="/board/dues" element={<RequireAuth roles={boardRoles}><BoardAdminRoute><Dues /></BoardAdminRoute></RequireAuth>} />
+      <Route path="/board/maintenance" element={<RequireAuth roles={boardRoles}><BoardAdminRoute><Maintenance /></BoardAdminRoute></RequireAuth>} />
+      <Route path="/board/announcements" element={<RequireAuth roles={boardRoles}><BoardAdminRoute><Announcements /></BoardAdminRoute></RequireAuth>} />
+      <Route path="/board/documents" element={<RequireAuth roles={boardRoles}><BoardAdminRoute><Documents /></BoardAdminRoute></RequireAuth>} />
+      <Route path="/board/members" element={<RequireAuth roles={boardRoles}><BoardAdminRoute><BoardMembers /></BoardAdminRoute></RequireAuth>} />
+      <Route path="/board/settings" element={<RequireAuth roles={boardRoles}><BoardAdminRoute><Settings /></BoardAdminRoute></RequireAuth>} />
+      <Route path="/board/reports" element={<RequireAuth roles={boardRoles}><BoardAdminRoute><Reports /></BoardAdminRoute></RequireAuth>} />
 
       {/* Resident */}
       <Route path="/resident/dashboard" element={<RequireAuth><ResidentDashboard /></RequireAuth>} />

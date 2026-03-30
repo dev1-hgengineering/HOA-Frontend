@@ -19,9 +19,15 @@ export default function Login() {
     setError('')
     setLoading(true)
     try {
-      const user = await login(email, password)
-      const isBoard = ['board_admin', 'treasurer', 'board_member'].includes(user.role)
-      navigate(isBoard ? '/board/dashboard' : '/resident/dashboard')
+      const data = await login(email, password)
+      const role = data.user.role
+      if (role === 'super_admin') {
+        navigate('/board/dashboard')
+      } else if (['board_admin', 'treasurer', 'board_member'].includes(role)) {
+        navigate('/board/dashboard')
+      } else {
+        navigate('/resident/dashboard')
+      }
     } catch (err) {
       setError(err.response?.data?.error || 'Invalid email or password')
     } finally {
@@ -73,6 +79,10 @@ export default function Login() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? 'Signing in…' : 'Sign in'}
             </Button>
+            <p className="text-center text-sm text-muted-foreground">
+              Don't have an account?{' '}
+              <Link to="/signup" className="hover:text-foreground underline">Create one</Link>
+            </p>
           </form>
         </CardContent>
       </Card>

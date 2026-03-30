@@ -5,7 +5,7 @@ const api = axios.create({
   withCredentials: true,
 })
 
-const publicPaths = ['/login', '/forgot-password', '/reset-password', '/invite']
+const publicPaths = ['/login', '/signup', '/forgot-password', '/reset-password', '/invite', '/accept', '/pending']
 
 api.interceptors.response.use(
   (res) => res,

@@ -1,28 +1,149 @@
 // Test accounts — use these to log in
+// board@test.com / password       → board_admin, approved, onboarding complete
+// pending@test.com / password     → board_admin, awaiting super_admin review
+// rejected@test.com / password    → board_admin, application rejected
+// new@test.com / password         → board_admin, onboarding incomplete (step 2)
+// treasurer@test.com / password   → treasurer
+// member@test.com / password      → board_member
+// resident@test.com / password    → resident
+// admin@test.com / password       → super_admin
+
+const orgs = {
+  org1: {
+    id: 'org1',
+    name: 'Oakwood HOA',
+    plan: 'starter',
+    unit_ceiling: 50,
+    approval_status: 'approved',
+    onboarding_step: 5,
+    onboarding_complete: true,
+    trial_ends_at: '2026-05-30',
+    rejection_reason: null,
+  },
+  org2: {
+    id: 'org2',
+    name: 'Maplewood HOA',
+    plan: 'starter',
+    unit_ceiling: 50,
+    approval_status: 'pending',
+    onboarding_step: 5,
+    onboarding_complete: true,
+    trial_ends_at: null,
+    rejection_reason: null,
+  },
+  org3: {
+    id: 'org3',
+    name: 'Pinecrest HOA',
+    plan: 'starter',
+    unit_ceiling: 50,
+    approval_status: 'rejected',
+    onboarding_step: 5,
+    onboarding_complete: true,
+    trial_ends_at: null,
+    rejection_reason: 'The uploaded verification document was illegible. Please resubmit with a clear, full-page scan of your HOA governing document.',
+  },
+  org4: {
+    id: 'org4',
+    name: 'Riverside HOA',
+    plan: 'starter',
+    unit_ceiling: 50,
+    approval_status: 'pending',
+    onboarding_step: 2,
+    onboarding_complete: false,
+    trial_ends_at: null,
+    rejection_reason: null,
+  },
+}
+
 export const users = [
   {
     id: '1',
     name: 'Alice Board',
+    first_name: 'Alice',
+    last_name: 'Board',
     email: 'board@test.com',
     password: 'password',
     role: 'board_admin',
-    unit: null,
+    org_id: 'org1',
+    org: orgs.org1,
+  },
+  {
+    id: '5',
+    name: 'Paula Pending',
+    first_name: 'Paula',
+    last_name: 'Pending',
+    email: 'pending@test.com',
+    password: 'password',
+    role: 'board_admin',
+    org_id: 'org2',
+    org: orgs.org2,
+  },
+  {
+    id: '6',
+    name: 'Randy Rejected',
+    first_name: 'Randy',
+    last_name: 'Rejected',
+    email: 'rejected@test.com',
+    password: 'password',
+    role: 'board_admin',
+    org_id: 'org3',
+    org: orgs.org3,
+  },
+  {
+    id: '7',
+    name: 'Nina New',
+    first_name: 'Nina',
+    last_name: 'New',
+    email: 'new@test.com',
+    password: 'password',
+    role: 'board_admin',
+    org_id: 'org4',
+    org: orgs.org4,
   },
   {
     id: '2',
     name: 'Bob Treasurer',
+    first_name: 'Bob',
+    last_name: 'Treasurer',
     email: 'treasurer@test.com',
     password: 'password',
     role: 'treasurer',
-    unit: null,
+    org_id: 'org1',
+    org: orgs.org1,
+  },
+  {
+    id: '8',
+    name: 'Maria Member',
+    first_name: 'Maria',
+    last_name: 'Member',
+    email: 'member@test.com',
+    password: 'password',
+    role: 'board_member',
+    org_id: 'org1',
+    org: orgs.org1,
   },
   {
     id: '3',
     name: 'Carol Resident',
+    first_name: 'Carol',
+    last_name: 'Resident',
     email: 'resident@test.com',
     password: 'password',
     role: 'resident',
     unit: 'Unit 4B',
+    org_id: 'org1',
+    org: null,
+  },
+  {
+    id: '9',
+    name: 'Sam Admin',
+    first_name: 'Sam',
+    last_name: 'Admin',
+    email: 'admin@test.com',
+    password: 'password',
+    role: 'super_admin',
+    org_id: null,
+    org: null,
   },
 ]
 
@@ -36,6 +157,7 @@ export const residents = [
 export const boardMembers = [
   { id: '1', name: 'Alice Board', email: 'board@test.com', role: 'board_admin' },
   { id: '2', name: 'Bob Treasurer', email: 'treasurer@test.com', role: 'treasurer' },
+  { id: '8', name: 'Maria Member', email: 'member@test.com', role: 'board_member' },
 ]
 
 export const maintenanceRequests = [
@@ -61,3 +183,23 @@ export const documents = [
   { id: '2', name: 'Community Rules.pdf', size: 102400, url: '#', created_at: '2025-06-15' },
   { id: '3', name: 'Budget 2026.xlsx', size: 51200, url: '#', created_at: '2026-01-10' },
 ]
+
+// Resident invite tokens for /accept route
+export const residentInviteTokens = {
+  'resident-token-abc123': {
+    email: 'newresident@test.com',
+    unit: 'Unit 3C',
+    org_name: 'Oakwood HOA',
+    org_id: 'org1',
+  },
+}
+
+// Board invite tokens for /invite route
+export const boardInviteTokens = {
+  'board-token-xyz789': {
+    email: 'newmember@test.com',
+    role: 'board_member',
+    org_name: 'Oakwood HOA',
+    org_id: 'org1',
+  },
+}
