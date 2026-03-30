@@ -1,121 +1,90 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { Toaster } from '@/components/ui/sonner'
+import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 
-function App() {
-  const [count, setCount] = useState(0)
+// Auth
+import Login from '@/pages/auth/Login'
+import ForgotPassword from '@/pages/auth/ForgotPassword'
+import ResetPassword from '@/pages/auth/ResetPassword'
+import AcceptInvite from '@/pages/auth/AcceptInvite'
 
+// Board
+import BoardDashboard from '@/pages/board/Dashboard'
+import Residents from '@/pages/board/Residents'
+import Dues from '@/pages/board/Dues'
+import Maintenance from '@/pages/board/Maintenance'
+import Announcements from '@/pages/board/Announcements'
+import Documents from '@/pages/board/Documents'
+import BoardMembers from '@/pages/board/BoardMembers'
+import Settings from '@/pages/board/Settings'
+import Reports from '@/pages/board/Reports'
+
+// Resident
+import ResidentDashboard from '@/pages/resident/Dashboard'
+import SubmitRequest from '@/pages/resident/SubmitRequest'
+import Profile from '@/pages/resident/Profile'
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      retry: 1,
+    },
+  },
+})
+
+function RequireAuth({ children, roles }) {
+  const { user, loading } = useAuth()
+  if (loading) return null
+  if (!user) return <Navigate to="/login" replace />
+  if (roles && !roles.includes(user.role)) return <Navigate to="/login" replace />
+  return children
+}
+
+const boardRoles = ['board_admin', 'treasurer', 'board_member', 'super_admin']
+
+function AppRoutes() {
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <Routes>
+      {/* Public */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/invite" element={<AcceptInvite />} />
 
-      <div className="ticks"></div>
+      {/* Board admin */}
+      <Route path="/board/dashboard" element={<RequireAuth roles={boardRoles}><BoardDashboard /></RequireAuth>} />
+      <Route path="/board/residents" element={<RequireAuth roles={boardRoles}><Residents /></RequireAuth>} />
+      <Route path="/board/dues" element={<RequireAuth roles={boardRoles}><Dues /></RequireAuth>} />
+      <Route path="/board/maintenance" element={<RequireAuth roles={boardRoles}><Maintenance /></RequireAuth>} />
+      <Route path="/board/announcements" element={<RequireAuth roles={boardRoles}><Announcements /></RequireAuth>} />
+      <Route path="/board/documents" element={<RequireAuth roles={boardRoles}><Documents /></RequireAuth>} />
+      <Route path="/board/members" element={<RequireAuth roles={boardRoles}><BoardMembers /></RequireAuth>} />
+      <Route path="/board/settings" element={<RequireAuth roles={boardRoles}><Settings /></RequireAuth>} />
+      <Route path="/board/reports" element={<RequireAuth roles={boardRoles}><Reports /></RequireAuth>} />
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+      {/* Resident */}
+      <Route path="/resident/dashboard" element={<RequireAuth><ResidentDashboard /></RequireAuth>} />
+      <Route path="/resident/request" element={<RequireAuth><SubmitRequest /></RequireAuth>} />
+      <Route path="/resident/profile" element={<RequireAuth><Profile /></RequireAuth>} />
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+      {/* Default */}
+      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="*" element={<Navigate to="/login" replace />} />
+    </Routes>
   )
 }
 
-export default App
+export default function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <AuthProvider>
+          <AppRoutes />
+          <Toaster />
+        </AuthProvider>
+      </BrowserRouter>
+    </QueryClientProvider>
+  )
+}
