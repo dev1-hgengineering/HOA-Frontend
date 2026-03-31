@@ -5,7 +5,6 @@ import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 
 // Auth
 import Login from '@/pages/auth/Login'
-import Signup from '@/pages/auth/Signup'
 import ForgotPassword from '@/pages/auth/ForgotPassword'
 import ResetPassword from '@/pages/auth/ResetPassword'
 import AcceptInvite from '@/pages/auth/AcceptInvite'
@@ -67,14 +66,14 @@ function AppRoutes() {
     <Routes>
       {/* Public */}
       <Route path="/login" element={<Login />} />
-      <Route path="/signup" element={<Signup />} />
+      <Route path="/signup" element={<Navigate to="/onboarding" replace />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/invite" element={<AcceptInvite />} />
       <Route path="/accept" element={<AcceptResident />} />
 
-      {/* Board admin: onboarding & pending (auth required, no approval gate) */}
-      <Route path="/onboarding" element={<RequireAuth><Onboarding /></RequireAuth>} />
+      {/* Board admin: onboarding & pending (step 1 is public — no auth required) */}
+      <Route path="/onboarding" element={<Onboarding />} />
       <Route path="/pending" element={<RequireAuth><PendingApproval /></RequireAuth>} />
 
       {/* Board */}

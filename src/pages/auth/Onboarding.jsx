@@ -14,7 +14,7 @@ import { Plus, Trash2, Upload, CheckCircle2, CreditCard } from 'lucide-react'
 const TOTAL_STEPS = 5
 
 const STEP_LABELS = [
-  'HOA Details',
+  'Account & HOA Details',
   'Board Members',
   'Residents',
   'Payment',
@@ -41,24 +41,59 @@ function StepIndicator({ current }) {
   )
 }
 
-// ── Step 1: HOA Details ──────────────────────────────────────────────────────
+// ── Step 1: Account + HOA Details ───────────────────────────────────────────
 
 function Step1({ onNext }) {
-  const [form, setForm] = useState({ address: '', city: '', state: '', zip: '', unit_count: '' })
+  const { signup } = useAuth()
+  const [form, setForm] = useState({
+    hoa_name: '',
+    first_name: '', last_name: '',
+    email: '', password: '', confirm_password: '',
+    address: '', city: '', state: '', zip: '', unit_count: '',
+  })
+  const [terms, setTerms] = useState(false)
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
   const set = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }))
 
-  const save = useMutation({
-    mutationFn: (data) => api.post('/onboarding/step1', data),
-    onSuccess: () => onNext(),
-    onError: () => setError('Failed to save. Please try again.'),
-  })
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
-    save.mutate(form)
+    if (form.password !== form.confirm_password) {
+      setError('Passwords do not match')
+      return
+    }
+    if (form.password.length < 8) {
+      setError('Password must be at least 8 characters')
+      return
+    }
+    if (!terms) {
+      setError('You must accept the terms of service to continue')
+      return
+    }
+    setLoading(true)
+    try {
+      await signup({
+        hoa_name: form.hoa_name,
+        first_name: form.first_name,
+        last_name: form.last_name,
+        email: form.email,
+        password: form.password,
+      })
+      await api.post('/onboarding/step1', {
+        address: form.address,
+        city: form.city,
+        state: form.state,
+        zip: form.zip,
+        unit_count: form.unit_count,
+      })
+      onNext()
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to create account. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -66,33 +101,90 @@ function Step1({ onNext }) {
       {error && (
         <p className="text-sm text-destructive bg-destructive/10 rounded-md px-3 py-2">{error}</p>
       )}
+
       <div className="space-y-2">
-        <Label htmlFor="address">Street address</Label>
-        <Input id="address" placeholder="123 Oak Lane" value={form.address} onChange={set('address')} required />
+        <Label htmlFor="hoa_name">HOA name</Label>
+        <Input id="hoa_name" placeholder="Oakwood Homeowners Association" value={form.hoa_name} onChange={set('hoa_name')} required autoFocus />
       </div>
+
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
-          <Label htmlFor="city">City</Label>
-          <Input id="city" placeholder="Dallas" value={form.city} onChange={set('city')} required />
+          <Label htmlFor="first_name">First name</Label>
+          <Input id="first_name" placeholder="Jane" value={form.first_name} onChange={set('first_name')} required />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="state">State</Label>
-          <Input id="state" placeholder="TX" maxLength={2} value={form.state} onChange={set('state')} required />
+          <Label htmlFor="last_name">Last name</Label>
+          <Input id="last_name" placeholder="Smith" value={form.last_name} onChange={set('last_name')} required />
         </div>
       </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="email">Email</Label>
+        <Input id="email" type="email" placeholder="you@example.com" value={form.email} onChange={set('email')} required />
+      </div>
+
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
-          <Label htmlFor="zip">ZIP code</Label>
-          <Input id="zip" placeholder="75201" value={form.zip} onChange={set('zip')} required />
+          <Label htmlFor="password">Password</Label>
+          <Input id="password" type="password" placeholder="At least 8 characters" value={form.password} onChange={set('password')} required />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="unit_count">Number of units</Label>
-          <Input id="unit_count" type="number" min={1} max={400} placeholder="48" value={form.unit_count} onChange={set('unit_count')} required />
+          <Label htmlFor="confirm_password">Confirm password</Label>
+          <Input id="confirm_password" type="password" value={form.confirm_password} onChange={set('confirm_password')} required />
         </div>
       </div>
-      <Button type="submit" className="w-full" disabled={save.isPending}>
-        {save.isPending ? 'Saving…' : 'Continue'}
+
+      <div className="border-t pt-4 space-y-4">
+        <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">HOA address</p>
+        <div className="space-y-2">
+          <Label htmlFor="address">Street address</Label>
+          <Input id="address" placeholder="123 Oak Lane" value={form.address} onChange={set('address')} required />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <Label htmlFor="city">City</Label>
+            <Input id="city" placeholder="Dallas" value={form.city} onChange={set('city')} required />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="state">State</Label>
+            <Input id="state" placeholder="TX" maxLength={2} value={form.state} onChange={set('state')} required />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <Label htmlFor="zip">ZIP code</Label>
+            <Input id="zip" placeholder="75201" value={form.zip} onChange={set('zip')} required />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="unit_count">Number of units</Label>
+            <Input id="unit_count" type="number" min={1} max={400} placeholder="48" value={form.unit_count} onChange={set('unit_count')} required />
+          </div>
+        </div>
+      </div>
+
+      <label className="flex items-start gap-3 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={terms}
+          onChange={(e) => setTerms(e.target.checked)}
+          className="mt-0.5 h-4 w-4 rounded border-input accent-primary"
+        />
+        <span className="text-sm text-muted-foreground leading-snug">
+          I agree to the{' '}
+          <a href="#" className="underline hover:text-foreground">Terms of Service</a>{' '}
+          and{' '}
+          <a href="#" className="underline hover:text-foreground">Privacy Policy</a>
+        </span>
+      </label>
+
+      <Button type="submit" className="w-full" disabled={loading}>
+        {loading ? 'Creating account…' : 'Continue'}
       </Button>
+
+      <p className="text-center text-sm text-muted-foreground">
+        Already have an account?{' '}
+        <a href="/login" className="underline hover:text-foreground">Sign in</a>
+      </p>
     </form>
   )
 }
@@ -471,14 +563,14 @@ export default function Onboarding() {
   }
 
   const STEP_TITLES = [
-    'Tell us about your HOA',
+    'Create your HOA account',
     'Invite board members',
     'Add residents',
     'Set up payment',
     'Review & submit',
   ]
   const STEP_DESCRIPTIONS = [
-    'We\'ll use this to set up your community.',
+    'Start your 60-day free trial. No credit card required until Step 4.',
     'They\'ll receive invites once your HOA is approved.',
     'Residents will receive invites once your HOA is approved.',
     'A card is required to activate your account after approval.',
